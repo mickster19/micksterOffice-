@@ -2,8 +2,13 @@ name: Build micksterOffice APK
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
 
 jobs:
   build:
@@ -29,6 +34,7 @@ jobs:
                    android-src/app/src/main/java/com/mickster/office \
                    android-src/app/src/main/res/mipmap-xxxhdpi
 
+          test -f index.html || echo "<h1>micksterOffice</h1>" > index.html
           cp index.html android-src/app/src/main/assets/index.html
 
           cat << 'PY' > make_icon.py
