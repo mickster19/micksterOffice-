@@ -31,41 +31,38 @@ jobs:
 
           cp index.html android-src/app/src/main/assets/index.html
 
-          python3 - << 'PY'
-import struct, zlib
-
-w, h = 192, 192
-raw = bytearray()
-for y in range(h):
-    raw.append(0)
-    for x in range(w):
-        # Neon cyan bus frame inside dark navy icon
-        in_frame = 20 <= x < w-20 and 20 <= y < h-20
-        in_bus = 38 <= x <= 154 and 64 <= y <= 126
-        in_wheel_l = ((x - 62)**2 + (y - 134)**2) <= 14**2
-        in_wheel_r = ((x - 130)**2 + (y - 134)**2) <= 14**2
-        if in_wheel_l or in_wheel_r:
-            r, g, b, a = 0, 240, 255, 255
-        elif in_bus:
-            r, g, b, a = 0, 210, 255, 255
-        elif in_frame:
-            r, g, b, a = 15, 23, 42, 255
-        else:
-            r, g, b, a = 7, 11, 20, 255
-        raw.extend((r, g, b, a))
-
-def chunk(tag, data):
-    return struct.pack("!I", len(data)) + tag + data + struct.pack("!I", zlib.crc32(tag + data) & 0xffffffff)
-
-png = (
-    b"\x89PNG\r\n\x1a\n"
-    + chunk(b"IHDR", struct.pack("!IIBBBBB", w, h, 8, 6, 0, 0, 0))
-    + chunk(b"IDAT", zlib.compress(bytes(raw), 9))
-    + chunk(b"IEND", b"")
-)
-with open("android-src/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png", "wb") as f:
-    f.write(png)
-PY
+          cat << 'PY' > make_icon.py
+          import struct, zlib
+          w, h = 192, 192
+          raw = bytearray()
+          for y in range(h):
+              raw.append(0)
+              for x in range(w):
+                  in_frame = 20 <= x < w-20 and 20 <= y < h-20
+                  in_bus = 38 <= x <= 154 and 64 <= y <= 126
+                  in_wheel_l = ((x - 62)**2 + (y - 134)**2) <= 14**2
+                  in_wheel_r = ((x - 130)**2 + (y - 134)**2) <= 14**2
+                  if in_wheel_l or in_wheel_r:
+                      r, g, b, a = 0, 240, 255, 255
+                  elif in_bus:
+                      r, g, b, a = 0, 210, 255, 255
+                  elif in_frame:
+                      r, g, b, a = 15, 23, 42, 255
+                  else:
+                      r, g, b, a = 7, 11, 20, 255
+                  raw.extend((r, g, b, a))
+          def chunk(tag, data):
+              return struct.pack("!I", len(data)) + tag + data + struct.pack("!I", zlib.crc32(tag + data) & 0xffffffff)
+          png = (
+              b"\x89PNG\r\n\x1a\n"
+              + chunk(b"IHDR", struct.pack("!IIBBBBB", w, h, 8, 6, 0, 0, 0))
+              + chunk(b"IDAT", zlib.compress(bytes(raw), 9))
+              + chunk(b"IEND", b"")
+          )
+          with open("android-src/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png", "wb") as f:
+              f.write(png)
+          PY
+          python3 make_icon.py
 
           cat << 'MANIFEST' > android-src/app/src/main/AndroidManifest.xml
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
