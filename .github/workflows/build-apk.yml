@@ -20,8 +20,10 @@ jobs:
       - name: Build APK
         run: |
           set -e
+          sudo rm -f /etc/apt/sources.list.d/*microsoft* /etc/apt/sources.list.d/*mssql* 2>/dev/null || true
           sudo dpkg --add-architecture i386
-          sudo apt-get update && sudo apt-get install -y wget unzip python3 python3-pil libc6:i386 libstdc++6:i386 zlib1g:i386
+          sudo apt-get update -o Acquire::AllowInsecureRepositories=true || true
+          sudo apt-get install -y --allow-unauthenticated wget unzip python3 libc6:i386 libstdc++6:i386 zlib1g:i386
 
           mkdir -p android-src/app/src/main/assets \
                    android-src/app/src/main/java/com/mickster/office \
@@ -30,15 +32,40 @@ jobs:
           cp index.html android-src/app/src/main/assets/index.html
 
           python3 - << 'PY'
-          from PIL import Image, ImageDraw
-          img = Image.new("RGBA", (192, 192), (7, 11, 20, 255))
-          d = ImageDraw.Draw(img)
-          d.rounded_rectangle([14, 14, 178, 178], radius=40, fill=(15, 23, 42, 255), outline=(0, 240, 255, 255), width=6)
-          d.rounded_rectangle([34, 58, 158, 126], radius=16, fill=(0, 210, 255, 255))
-          d.ellipse([48, 118, 76, 146], fill=(2, 6, 23, 255))
-          d.ellipse([116, 118, 144, 146], fill=(2, 6, 23, 255))
-          img.save("android-src/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png")
-          PY
+import struct, zlib
+
+w, h = 192, 192
+raw = bytearray()
+for y in range(h):
+    raw.append(0)
+    for x in range(w):
+        # Neon cyan bus frame inside dark navy icon
+        in_frame = 20 <= x < w-20 and 20 <= y < h-20
+        in_bus = 38 <= x <= 154 and 64 <= y <= 126
+        in_wheel_l = ((x - 62)**2 + (y - 134)**2) <= 14**2
+        in_wheel_r = ((x - 130)**2 + (y - 134)**2) <= 14**2
+        if in_wheel_l or in_wheel_r:
+            r, g, b, a = 0, 240, 255, 255
+        elif in_bus:
+            r, g, b, a = 0, 210, 255, 255
+        elif in_frame:
+            r, g, b, a = 15, 23, 42, 255
+        else:
+            r, g, b, a = 7, 11, 20, 255
+        raw.extend((r, g, b, a))
+
+def chunk(tag, data):
+    return struct.pack("!I", len(data)) + tag + data + struct.pack("!I", zlib.crc32(tag + data) & 0xffffffff)
+
+png = (
+    b"\x89PNG\r\n\x1a\n"
+    + chunk(b"IHDR", struct.pack("!IIBBBBB", w, h, 8, 6, 0, 0, 0))
+    + chunk(b"IDAT", zlib.compress(bytes(raw), 9))
+    + chunk(b"IEND", b"")
+)
+with open("android-src/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png", "wb") as f:
+    f.write(png)
+PY
 
           cat << 'MANIFEST' > android-src/app/src/main/AndroidManifest.xml
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
