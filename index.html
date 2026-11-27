@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>micksterOffice</title>
+  <style>
+    * { box-sizing: border-box; font-family: system-ui, sans-serif; }
+    body { margin: 0; background: #070b14; color: #f8fafc; padding: 12px 12px 80px; }
+    h1 { margin: 0; font-size: 19px; color: #00f0ff; }
+    .sub { font-size: 12px; color: #94a3b8; margin-bottom: 10px; }
+    .tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
+    .tab { padding: 9px 6px; border-radius: 10px; background: #111827; border: 1px solid #1e293b; color: #94a3b8; font-size: 11px; font-weight: 700; text-align: center; cursor: pointer; }
+    .tab.active { background: rgba(0,240,255,0.15); color: #00f0ff; border-color: #00f0ff; }
+    .card { background: #0f172a; border: 1px solid #1e293b; border-radius: 14px; padding: 12px; margin-bottom: 12px; }
+    label { display: block; font-size: 12px; color: #cbd5e1; margin: 8px 0 4px; }
+    input, select, textarea { width: 100%; padding: 9px 11px; border-radius: 10px; border: 1px solid #334155; background: #070b14; color: #fff; font-size: 13px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    button { width: 100%; padding: 11px; border: none; border-radius: 11px; background: linear-gradient(135deg,#00d2ff,#2563eb); color: #04101f; font-weight: 800; font-size: 13px; margin-top: 10px; cursor: pointer; }
+    button.sec { background: #1e293b; color: #f8fafc; }
+    canvas#scene3d { width: 100%; height: 240px; border-radius: 12px; background: #050811; display: block; border: 1px solid #1e293b; }
+    .page { display: none; }
+    .page.active { display: block; }
+    .pill { display: inline-block; padding: 4px 8px; border-radius: 999px; background: rgba(16,185,129,0.15); color: #34d399; font-size: 11px; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1>micksterOffice</h1>
+  <div class="sub">TZ Bus Game Studio • Basi • Menu • Vituo vya TZ • Export Game APK</div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="showPage('bus', this)">1. Basi</div>
+    <div class="tab" onclick="showPage('menu', this)">2. Menu</div>
+    <div class="tab" onclick="showPage('route', this)">3. Vituo TZ</div>
+    <div class="tab" onclick="showPage('play', this)">4. Play & Export</div>
+  </div>
+
+  <div id="page-bus" class="page active">
+    <div class="card">
+      <canvas id="scene3d"></canvas>
+      <label>Jina la Basi</label>
+      <input id="busName" value="Mbalizi Express 3D" oninput="saveProj()" />
+      <div class="row">
+        <div>
+          <label>Rangi ya Basi</label>
+          <input id="busColor" type="color" value="#00d2ff" oninput="saveProj()" />
+        </div>
+        <div>
+          <label>Kasi (km/h)</label>
+          <input id="busSpeed" type="number" value="110" oninput="saveProj()" />
+        </div>
+      </div>
+      <label>Muundo wa Basi</label>
+      <select id="busStyle" onchange="saveProj()">
+        <option value="coach">Luxury Coach (Mikoa)</option>
+        <option value="daladala">City / Daladala (Mitaa)</option>
+        <option value="double">Double Decker</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="page-menu" class="page">
+    <div class="card">
+      <label>Jina Kuu la Game</label>
+      <input id="gameTitle" value="micksterOffice TZ Bus" oninput="saveProj()" />
+      <label>Kauli Mbiu ya Menu</label>
+      <input id="gameTagline" value="Safiri Salama • Vituo Vya Tanzania" oninput="saveProj()" />
+      <label>Rangi ya Kitufe cha PLAY</label>
+      <input id="playBtnColor" type="color" value="#10b981" oninput="saveProj()" />
+    </div>
+  </div>
+
+  <div id="page-route" class="page">
+    <div class="card">
+      <label>Vituo vya Tanzania (Tenganisha kwa koma)</label>
+      <textarea id="stationsInput" rows="3" oninput="saveProj()">Mbalizi, Uyole, Songwe, Mafinga, Iringa, Morogoro, Ubungo Dar</textarea>
+      <label>Nauli Kila Kituo (TZS)</label>
+      <input id="fareInput" type="number" value="2500" oninput="saveProj()" />
+    </div>
+  </div>
+
+  <div id="page-play" class="page">
+    <div class="card">
+      <div id="previewBox" style="padding:14px;border-radius:12px;background:#070b14;border:1px solid #1e293b;text-align:center;">
+        <span class="pill">GAME MENU PREVIEW</span>
+        <h2 id="prevTitle" style="margin:8px 0 4px;">micksterOffice TZ Bus</h2>
+        <div id="prevTag" style="font-size:12px;color:#94a3b8;margin-bottom:10px;"></div>
+        <button id="prevPlayBtn" onclick="startDrive()">▶ START ROUTE</button>
+      </div>
+      <div id="driveHud" style="margin-top:12px;font-size:13px;color:#38bdf8;"></div>
+      <div class="row">
+        <button class="sec" onclick="stepDrive(-1)">⬅ Punguza</button>
+        <button onclick="stepDrive(1)">Kanyaga ➡</button>
+      </div>
+      <button class="sec" onclick="copyJson()">Copy Project JSON (Kwa Export)</button>
+      <textarea id="jsonOut" rows="4" readonly style="margin-top:8px;font-size:11px;"></textarea>
+    </div>
+  </div>
+
+  <script>
+    const def = {
+      busName: "Mbalizi Express 3D",
+      busColor: "#00d2ff",
+      busSpeed: 110,
+      busStyle: "coach",
+      gameTitle: "micksterOffice TZ Bus",
+      gameTagline: "Safiri Salama • Vituo Vya Tanzania",
+      playBtnColor: "#10b981",
+      stations: "Mbalizi, Uyole, Songwe, Mafinga, Iringa, Morogoro, Ubungo Dar",
+      fare: 2500
+    };
+    let proj = Object.assign({}, def, JSON.parse(localStorage.getItem("mickster_office_proj") || "{}"));
+    let km = 0, speedNow = 0;
+
+    function bindInputs() {
+      busName.value = proj.busName;
+      busColor.value = proj.busColor;
+      busSpeed.value = proj.busSpeed;
+      busStyle.value = proj.busStyle;
+      gameTitle.value = proj.gameTitle;
+      gameTagline.value = proj.gameTagline;
+      playBtnColor.value = proj.playBtnColor;
+      stationsInput.value = proj.stations;
+      fareInput.value = proj.fare;
+      updatePreview();
+    }
+
+    function saveProj() {
+      proj = {
+        busName: busName.value || def.busName,
+        busColor: busColor.value || def.busColor,
+        busSpeed: Number(busSpeed.value) || 100,
+        busStyle: busStyle.value,
+        gameTitle: gameTitle.value || def.gameTitle,
+        gameTagline: gameTagline.value || def.gameTagline,
+        playBtnColor: playBtnColor.value || def.playBtnColor,
+        stations: stationsInput.value || def.stations,
+        fare: Number(fareInput.value) || 2000
+      };
+      localStorage.setItem("mickster_office_proj", JSON.stringify(proj));
+      updatePreview();
+    }
+
+    function updatePreview() {
+      prevTitle.textContent = proj.gameTitle;
+      prevTag.textContent = proj.gameTagline + " • " + proj.busName;
+      prevPlayBtn.style.background = proj.playBtnColor;
+      prevPlayBtn.style.color = "#04101f";
+      jsonOut.value = JSON.stringify(proj, null, 2);
+      renderHud();
+    }
+
+    function showPage(id, el) {
+      document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+      document.getElementById("page-" + id).classList.add("active");
+      el.classList.add("active");
+    }
+
+    function startDrive() {
+      speedNow = Math.min(proj.busSpeed, 80);
+      renderHud();
+    }
+
+    function stepDrive(dir) {
+      speedNow = Math.max(0, Math.min(proj.busSpeed, speedNow + dir * 20));
+      km += speedNow > 0 ? 15 : 0;
+      renderHud();
+    }
+
+    function renderHud() {
+      const list = proj.stations.split(",").map(s => s.trim()).filter(Boolean);
+      const idx = list.length ? Math.floor(km / 25) % list.length : 0;
+      const station = list[idx] || "Mbalizi";
+      const earned = (idx + 1) * proj.fare;
+      driveHud.innerHTML = `Kituo: <strong>${station}</strong> | Kasi: <strong>${speedNow}/${proj.busSpeed} km/h</strong> | Mapato: <strong>TZS ${earned.toLocaleString()}</strong>`;
+    }
+
+    function copyJson() {
+      jsonOut.select();
+      document.execCommand("copy");
+      alert("Project JSON imekopiwa!");
+    }
+
+    const cv = document.getElementById("scene3d");
+    const ctx = cv.getContext("2d");
+    let angle = 0;
+
+    function draw3DBus() {
+      cv.width = cv.clientWidth * 2;
+      cv.height = cv.clientHeight * 2;
+      ctx.scale(2, 2);
+      const w = cv.clientWidth, h = cv.clientHeight;
+      ctx.clearRect(0, 0, w, h);
+
+      ctx.strokeStyle = "#1e293b";
+      for (let x = 0; x < w; x += 24) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+      for (let y = 0; y < h; y += 24) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+
+      ctx.fillStyle = "#111827";
+      ctx.fillRect(0, h * 0.65, w, h * 0.35);
+
+      const cx = w / 2, cy = h * 0.56;
+      const tilt = Math.sin(angle) * 18;
+      const depthX = Math.cos(angle) * 16;
+      const bw = 150, bh = proj.busStyle === "double" ? 68 : 48;
+
+      ctx.save();
+      ctx.translate(cx, cy);
+
+      ctx.fillStyle = "#1e293b";
+      ctx.beginPath();
+      ctx.moveTo(-bw/2 + tilt, -bh/2);
+      ctx.lineTo(-bw/2 + tilt + depthX, -bh/2 - 12);
+      ctx.lineTo(bw/2 + tilt + depthX, -bh/2 - 12);
+      ctx.lineTo(bw/2 + tilt, -bh/2);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = proj.busColor;
+      ctx.beginPath();
+      ctx.roundRect(-bw/2 + tilt, -bh/2, bw, bh, 10);
+      ctx.fill();
+
+      ctx.fillStyle = "#060b16";
+      const winCount = proj.busStyle === "daladala" ? 3 : 5;
+      const gap = (bw - 24) / winCount;
+      for (let i = 0; i < winCount; i++) {
+        ctx.fillRect(-bw/2 + tilt + 12 + i * gap, -bh/2 + 8, gap - 5, 14);
+      }
+
+      ctx.fillStyle = "#020617";
+      ctx.beginPath();
+      ctx.arc(-bw/2 + tilt + 30, bh/2, 13, 0, Math.PI * 2);
+      ctx.arc(bw/2 + tilt - 30, bh/2, 13, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+      angle += 0.025;
+      requestAnimationFrame(draw3DBus);
+    }
+
+    bindInputs();
+    draw3DBus();
+  </script>
+</body>
+</html>
